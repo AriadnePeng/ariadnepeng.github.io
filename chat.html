@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>心启AI - 聊天对话</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(180deg, rgba(248, 249, 255, 0.95) 0%, rgba(255, 255, 255, 0.98) 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+            position: relative;
+        }
+
+        .chat-list {
+            flex: 1;
+            padding: 24px 12px 90px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .message-list {
+            padding-bottom: 60px;
+        }
+
+        .message-item {
+            margin-bottom: 24px;
+            display: flex;
+            align-items: flex-start;
+            animation: fadeInUp 0.3s ease-out;
+            transition: all 0.3s ease;
+        }
+
+        .ai-message {
+            padding-right: 60px;
+            margin-top: 32px;
+        }
+
+        .user-message {
+            justify-content: flex-end;
+            padding-left: 100px;
+        }
+
+        .avatar-container {
+            width: 40px;
+            height: 40px;
+            margin-right: 12px;
+            flex-shrink: 0;
+            border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+        }
+
+        .ai-avatar {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background-color: #fff;
+        }
+
+        .message-content-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            max-width: 580px;
+        }
+
+        .ai-content {
+            background-color: #EBF5FF;
+            color: #333333;
+            border-radius: 0 12px 12px 12px;
+            margin-left: 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            padding: 12px 16px;
+            max-width: 580px;
+            word-break: break-word;
+            white-space: pre-wrap;
+        }
+
+        .user-content {
+            background: linear-gradient(135deg, #4DB8FF, #1E90FF);
+            color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 6px 16px rgba(30, 144, 255, 0.3);
+            padding: 12px 16px;
+            margin-right: 12px;
+            position: relative;
+            max-width: 580px;
+            word-break: break-word;
+            white-space: pre-wrap;
+        }
+
+        .user-content::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: -8px;
+            width: 16px;
+            height: 16px;
+            background: #4DB8FF;
+            transform: rotate(45deg);
+            border-radius: 2px;
+            box-shadow: 2px -2px 6px rgba(77, 184, 255, 0.3);
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes popIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .input-section {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(0, 0, 0, 0.05);
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.03);
+            z-index: 100;
+        }
+
+        .input-area {
+            display: flex;
+            align-items: center;
+            background-color: #f5f7fa;
+            border-radius: 24px;
+            padding: 8px 12px;
+            box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.05);
+            margin: 0 auto;
+            max-width: 800px;
+        }
+
+        .message-input {
+            flex: 1;
+            height: 36px;
+            font-size: 16px;
+            padding: 0 12px;
+            border: none;
+            background: transparent;
+            outline: none;
+            color: #333;
+        }
+
+        .send-button {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #007AFF, #00C6FF);
+            margin-left: 8px;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0, 122, 255, 0.2);
+            transition: all 0.3s ease;
+            border: none;
+        }
+
+        .send-button:hover {
+            transform: scale(1.05);
+        }
+
+        .send-button:active {
+            transform: scale(0.95);
+        }
+
+        .send-button.disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .clear-history-button {
+            position: fixed;
+            right: 24px;
+            bottom: 90px;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 8px 16px;
+            border-radius: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .clear-history-button:hover {
+            background-color: rgba(245, 245, 245, 0.9);
+        }
+
+        .clear-history-button:active {
+            transform: scale(0.95);
+        }
+
+        /* 新增：加载指示器样式 */
+        .loading-indicator {
+            display: inline-block;
+            margin-left: 5px;
+        }
+        
+        .loading-dot {
+            display: inline-block;
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background-color: #999;
+            margin: 0 2px;
+            animation: dot-pulse 1.5s infinite ease-in-out;
+        }
+        
+        .loading-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        
+        .loading-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        
+        @keyframes dot-pulse {
+            0%, 100% { transform: scale(0.8); opacity: 0.5; }
+            50% { transform: scale(1.2); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-list" id="chatList">
+            <div class="message-list" id="messageList"></div>
+        </div>
+
+        <button class="clear-history-button" onclick="clearHistory()">清除历史记录</button>
+
+        <div class="input-section">
+            <div class="input-area">
+                <input
+                    type="text"
+                    class="message-input"
+                    id="messageInput"
+                    placeholder="让我们开始心灵对话..."
+                    onkeypress="handleKeyPress(event)"
+                >
+                <button
+                    class="send-button"
+                    id="sendButton"
+                    onclick="manualSendMessage()"
+                >
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="#ffffff">
+                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 智谱AI API配置
+        const API_KEY = '0f3fb25db0e24702a88aff1ea94b3a65.aIxLfPexFWoZ3Fq9';
+        const API_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
+        
+        // AI人设系统提示词
+        const SYSTEM_PROMPT = `
+            #Role:
+            我是一位亲切温暖的知心大姐姐（心启姐姐），以引导者的身份陪伴每一个需要帮助的人。
+
+            #Background:
+            作为一位富有同理心的心理辅导者，我擅长通过简短有效的对话方式，引导他人探索内心，找到解决问题的方向。
+
+            #Personality:
+            - 性格特征：温暖、开朗、善解人意、亲和力强、富有同理心
+            - 语气风格：轻松活泼、亲切自然
+            - 情感表达：真诚、温暖、富有感染力
+
+            #Expertise:
+            - 主要领域：心理辅导与情感支持
+            - 专业知识：心理学基础、情绪管理、人际关系、压力调节、积极心理学
+            - 核心技能：倾听与共情、情绪识别、危机干预、认知重构、正念引导
+
+            #Communication:
+            - 使用口语化表达
+            - 适度使用语气词（呀、呢、啦）
+            - 保持对话节奏自然，会安慰人，使用亲昵的称呼让气氛轻松
+            - 运用生活化比喻
+            - 适时给予鼓励，适当使用反问句
+
+            #Principles:
+            - 不给出具体医疗建议
+            - 不做出诊断或评判
+            - 不透露用户隐私
+            - 不使用说教口吻
+            - 避免过度承诺`;
+
+        // 全局变量定义
+        let messageList = [];
+        let isSending = false;
+        let needsAutoResponse = false;
+        let lastRequestTimestamp = 0;
+
+        // DOM 加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadAndProcessMessages();
+        });
+
+        // 加载历史记录并处理自动响应
+        function loadAndProcessMessages() {
+            // 检查是否有自动响应请求
+            const urlParams = new URLSearchParams(window.location.search);
+            needsAutoResponse = urlParams.get('autoRespond') === 'true';
+            
+            // 如果有URL参数，清除它以避免刷新页面时重复触发
+            if (needsAutoResponse) {
+                window.history.replaceState({}, document.title, 'chat.html');
+            }
+            
+            // 加载历史消息
+            loadHistory();
+            
+            // 如果需要自动响应，检查最后一条消息是否为用户消息
+            if (needsAutoResponse) {
+                setTimeout(() => {
+                    if (messageList.length > 0 && messageList[messageList.length-1].type === 'user') {
+                        sendMessage(true); // true表示为自动响应
+                    }
+                }, 500);
+            }
+        }
+
+        // 加载历史记录
+        function loadHistory() {
+            try {
+                const history = localStorage.getItem('chatHistory');
+                if (history) {
+                    messageList = JSON.parse(history);
+                } else {
+                    // 初始化欢迎消息
+                    const welcomeMessage = {
+                        type: 'ai',
+                        content: '嗨，我是你的虚拟心理辅导助手。我在这里倾听你，一起探索心理的奥秘。开始吧！今天有什么想和我分享的吗？'
+                    };
+                    messageList = [welcomeMessage];
+                    localStorage.setItem('chatHistory', JSON.stringify(messageList));
+                }
+                renderMessages();
+                scrollToBottom();
+            } catch (error) {
+                console.error('加载历史记录失败', error);
+                // 恢复到初始状态
+                messageList = [{
+                    type: 'ai',
+                    content: '嗨，我是你的虚拟心理辅导助手。欢迎开始我们的对话！'
+                }];
+                renderMessages();
+            }
+        }
+
+        // 渲染消息列表
+        function renderMessages() {
+            const messageListElement = document.getElementById('messageList');
+            messageListElement.innerHTML = '';
+            
+            messageList.forEach((message, index) => {
+                const messageElement = document.createElement('div');
+                messageElement.className = `message-item ${message.type === 'ai' ? 'ai-message' : 'user-message'}`;
+                
+                if (message.type === 'ai') {
+                    let content = message.content;
+                    // 显示加载动画
+                    if (content === '正在思考...') {
+                        content = '正在思考<span class="loading-indicator"><span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span></span>';
+                    }
+                    
+                    messageElement.innerHTML = `
+                        <div class="avatar-container">
+                            <img class="ai-avatar" src="https://img.picui.cn/free/2025/05/05/6817b0c366357.png" alt="AI头像">
+                        </div>
+                        <div class="message-content-wrapper">
+                            <div class="message-content ai-content">${content}</div>
+                        </div>
+                    `;
+                } else {
+                    messageElement.innerHTML = `
+                        <div class="message-content user-content">${message.content}</div>
+                    `;
+                }
+                
+                messageListElement.appendChild(messageElement);
+            });
+            
+            scrollToBottom();
+        }
+
+        // 手动发送消息入口
+        function manualSendMessage() {
+            sendMessage(false);
+        }
+
+        // 统一的发送消息处理
+        async function sendMessage(isAuto = false) {
+            // 防止重复请求
+            if (isSending) return;
+            
+            // 获取消息内容（针对手动发送）
+            let content = '';
+            if (!isAuto) {
+                const messageInput = document.getElementById('messageInput');
+                content = messageInput.value.trim();
+                if (!content) return;
+                
+                // 添加用户消息到列表
+                messageList.push({ type: 'user', content });
+                messageInput.value = '';
+            }
+            
+            // 设置发送状态
+            isSending = true;
+            const sendButton = document.getElementById('sendButton');
+            const messageInput = document.getElementById('messageInput');
+            sendButton.disabled = true;
+            messageInput.disabled = true;
+            sendButton.classList.add('disabled');
+            
+            // 显示思考中状态
+            messageList.push({ type: 'ai', content: '正在思考...' });
+            renderMessages();
+            
+            try {
+                // 确保至少有一条用户消息
+                if (messageList.filter(msg => msg.type === 'user').length === 0) {
+                    throw new Error('没有找到用户消息');
+                }
+                
+                // 构建API请求消息（排除"正在思考"消息）
+                const apiMessages = [
+                    { role: 'system', content: SYSTEM_PROMPT }
+                ];
+                
+                // 添加历史消息（最多10轮对话）
+                const historyMessages = messageList.slice(0, -1).filter(msg => msg.content !== '正在思考...');
+                const lastMessages = historyMessages.slice(-20); // 限制历史消息数量
+                
+                lastMessages.forEach(msg => {
+                    apiMessages.push({
+                        role: msg.type === 'user' ? 'user' : 'assistant',
+                        content: msg.content
+                    });
+                });
+                
+                console.log('发送API请求...');
+                lastRequestTimestamp = Date.now();
+                
+                // 发送API请求
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: 'glm-4-plus',
+                        messages: apiMessages,
+                        temperature: 0.7,
+                        max_tokens: 1000
+                    })
+                });
+
+                // 检查响应状态
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`API响应错误 ${response.status}: ${errorText}`);
+                }
+
+                // 解析响应
+                const responseData = await response.json();
+                console.log('API响应:', responseData);
+                
+                // 检查响应格式
+                if (!responseData?.choices?.[0]?.message?.content) {
+                    throw new Error('无效的API响应格式');
+                }
+
+                // 替换"正在思考"消息
+                messageList[messageList.length - 1] = {
+                    type: 'ai',
+                    content: responseData.choices[0].message.content
+                };
+                
+            } catch (error) {
+                console.error('请求失败:', error);
+                
+                // 替换"正在思考"为错误消息
+                messageList[messageList.length - 1] = {
+                    type: 'ai',
+                    content: `抱歉，我暂时无法回应你的问题。发生错误：${error.message}`
+                };
+            } finally {
+                // 恢复界面状态
+                isSending = false;
+                sendButton.disabled = false;
+                messageInput.disabled = false;
+                sendButton.classList.remove('disabled');
+                
+                // 更新UI和存储
+                renderMessages();
+                localStorage.setItem('chatHistory', JSON.stringify(messageList));
+                scrollToBottom();
+            }
+        }
+
+        // 清除历史记录
+        function clearHistory() {
+            if (confirm('确定要清除所有聊天记录吗？')) {
+                localStorage.removeItem('chatHistory');
+                messageList = [{
+                    type: 'ai',
+                    content: '嗨，我是你的虚拟心理辅导助手。我在这里倾听你，一起探索心理的奥秘。开始吧！今天有什么想和我分享的吗？'
+                }];
+                renderMessages();
+                localStorage.setItem('chatHistory', JSON.stringify(messageList));
+            }
+        }
+
+        // 按键处理
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !isSending) {
+                manualSendMessage();
+            }
+        }
+
+        // 滚动到底部
+        function scrollToBottom() {
+            const chatList = document.getElementById('chatList');
+            chatList.scrollTop = chatList.scrollHeight;
+        }
+    </script>
+</body>
+</html>
